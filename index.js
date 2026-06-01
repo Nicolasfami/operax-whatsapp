@@ -37,11 +37,11 @@ if (process.env.CLEAR_AUTH) {
 async function salvarMsg(telefone, conteudo, nome) {
   try {
     await supabase.from("whatsapp_mensagens").insert({ telefone, conteudo, de_mim: false, timestamp: new Date().toISOString() })
-    const { data } = await supabase.from("whatsapp_conversas").select("*").eq("telefone", telefone).single().catch(() => ({ data: null }))
+    const { data: conv } = await supabase.from("whatsapp_conversas").select("*").eq("telefone", telefone).single()
     await supabase.from("whatsapp_conversas").upsert({
-      telefone, nome: nome || data?.nome || telefone,
+      telefone, nome: nome || (conv && conv.nome) || telefone,
       ultimo_msg: conteudo, ultima_atualizacao: new Date().toISOString(),
-      nao_lidas: (data?.nao_lidas || 0) + 1
+      nao_lidas: ((conv && conv.nao_lidas) || 0) + 1
     }, { onConflict: "telefone" })
   } catch (e) { console.error("Erro salvar msg:", e.message) }
 }
