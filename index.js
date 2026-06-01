@@ -24,6 +24,16 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 const AUTH_FOLDER = "./auth_info"
 let sock = null, qrCode = null, pairingCode = null, connected = false
 
+// Limpa auth se variavel CLEAR_AUTH estiver definida
+if (process.env.CLEAR_AUTH) {
+  try {
+    if (fs.existsSync(AUTH_FOLDER)) {
+      fs.rmSync(AUTH_FOLDER, { recursive: true, force: true })
+      console.log("Auth limpa com sucesso!")
+    }
+  } catch(e) { console.log("Erro ao limpar auth:", e.message) }
+}
+
 async function salvarMsg(telefone, conteudo, nome) {
   try {
     await supabase.from("whatsapp_mensagens").insert({ telefone, conteudo, de_mim: false, timestamp: new Date().toISOString() })
