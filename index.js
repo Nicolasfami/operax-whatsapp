@@ -22,7 +22,7 @@ const SUPABASE_KEY = "sb_publishable_aATPGJyG-Q8KuLLflByr8w_nrHxt0mt"
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 const AUTH_FOLDER = "./auth_info"
-let sock = null, qrCode = null, pairingCode = null, connected = false
+let sock = null, qrCode = null, pairingCode = null, connected = false, qrReady = false
 
 // Limpa sessão antiga se variável CLEAR_AUTH estiver definida
 if (process.env.CLEAR_AUTH) {
@@ -51,8 +51,8 @@ async function conectar() {
   const { version } = await fetchLatestBaileysVersion()
   sock = makeWASocket({ version, logger: pino({ level: "silent" }), printQRInTerminal: true, auth: state, browser: ["OPERAX", "Chrome", "1.0"] })
   sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
-    if (qr) { qrCode = qr; connected = false; io.emit("qr", { qr }) }
-    if (connection === "close") {
+    if (qr) { qrCode = qr; qrReady = true; connected = false; io.emit("qr", { qr }) }
+    if (connection === "close") { qrReady = false;
       connected = false; qrCode = null; pairingCode = null
       const should = (lastDisconnect?.error instanceof Boom) ? lastDisconnect.error.output?.statusCode !== DisconnectReason.loggedOut : true
       if (should) setTimeout(() => conectar(), 3000)
@@ -89,11 +89,31 @@ app.post("/send", async (req, res) => {
 
 app.post("/request-pairing", async (req, res) => {
   const { phone } = req.body
-  if (!sock || connected) return res.json({ error: connected ? "Ja conectado" : "Servidor nao iniciado" })
+  const phoneClean = (phone || "").replace(/\D/g, "")
+  if (!phoneClean || phoneClean.length < 10) return res.status(400).json({ error: "Numero invalido" })
+  if (connected) return res.json({ error: "Ja conectado" })
+  if (!sock) return res.status(503).json({ error: "Servidor nao iniciado" })
   try {
-    const code = await sock.requestPairingCode(phone.replace(/\D/g, ""))
-    pairingCode = code; io.emit("pairing_code", { code }); res.json({ code })
-  } catch (e) { io.emit("pairing_error", { error: e.message }); res.json({ error: e.message }) }
+    console.log("Aguardando QR ficar pronto para gerar pairing code...")
+    // Aguarda o QR ser gerado (ate 30 segundos)
+    let tentativas = 0
+    while (!qrReady && tentativas < 60) {
+      await new Promise(r => setTimeout(r, 500))
+      tentativas++
+    }
+    if (!qrReady) return res.json({ error: "Servidor ainda inicializando, tente novamente em 10 segundos" })
+    console.log("QR pronto! Gerando pairing code para:", phoneClean)
+    await new Promise(r => setTimeout(r, 1000))
+    const code = await sock.requestPairingCode(phoneClean)
+    pairingCode = code
+    io.emit("pairing_code", { code })
+    res.json({ code })
+    console.log("Pairing code gerado:", code)
+  } catch (e) {
+    console.error("Erro pairing:", e.message)
+    io.emit("pairing_error", { error: e.message })
+    res.json({ error: e.message })
+  }
 })
 
 app.delete("/auth", (req, res) => {
