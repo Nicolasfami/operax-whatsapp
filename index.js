@@ -1,3 +1,4 @@
+// INDEX v46
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require("@whiskeysockets/baileys")
 const { Boom } = require("@hapi/boom")
 const express = require("express")
@@ -36,10 +37,12 @@ if (process.env.CLEAR_AUTH) {
 
 async function salvarMsg(telefone, conteudo, nome) {
   try {
-    await supabase.from("whatsapp_mensagens").insert({ telefone, conteudo, de_mim: false, timestamp: new Date().toISOString() })
-    const { data: conv } = await supabase.from("whatsapp_conversas").select("*").eq("telefone", telefone).single()
+    // Remove @lid, @s.whatsapp.net e qualquer sufixo
+    const tel = telefone.replace(/@.*$/, "").replace(/\D/g, "")
+    await supabase.from("whatsapp_mensagens").insert({ telefone: tel, conteudo, de_mim: false, timestamp: new Date().toISOString() })
+    const { data: conv } = await supabase.from("whatsapp_conversas").select("*").eq("telefone", tel).single()
     await supabase.from("whatsapp_conversas").upsert({
-      telefone, nome: nome || (conv && conv.nome) || telefone,
+      telefone: tel, nome: nome || (conv && conv.nome) || tel,
       ultimo_msg: conteudo, ultima_atualizacao: new Date().toISOString(),
       nao_lidas: ((conv && conv.nao_lidas) || 0) + 1
     }, { onConflict: "telefone" })
