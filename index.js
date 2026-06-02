@@ -1,4 +1,4 @@
-// INDEX v49
+// INDEX v50
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require("@whiskeysockets/baileys")
 const { Boom } = require("@hapi/boom")
 const express = require("express")
@@ -315,9 +315,7 @@ function renderConvs(lista) {
     var nr = c.nao_lidas > 0 ? '<span class="nr">'+c.nao_lidas+'</span>' : '';
     var ini = nome.split(' ').slice(0,2).map(function(p){ return p[0] ? p[0].toUpperCase() : ''; }).join('');
     var ativo = tel === telAtivo ? 'active' : '';
-    var telEsc = tel.replace(/"/g,'');
-    var nomeEsc = nome.replace(/"/g,'').replace(/'/g,'');
-    html += '<div class="conv '+ativo+'" onclick="sel(\''+telEsc+'\',\''+nomeEsc+'\')">';
+    html += '<div class="conv '+ativo+'" data-tel="'+tel+'" data-nome="'+nome.replace(/"/g,'')+'" onclick="selByEl(this)">';
     html += '<div class="av">'+ini+'</div>';
     html += '<div class="conv-info"><div style="display:flex;justify-content:space-between;align-items:center;"><span class="conv-name">'+nome+'</span>'+nr+'</div>';
     html += '<div class="conv-prev">'+prev+'</div></div></div>';
@@ -335,6 +333,12 @@ async function sel(tel, nome) {
   await carregarMsgs(tel);
   await carregarVenda(tel);
   renderRR();
+}
+
+function selByEl(el) {
+  var tel = el.getAttribute('data-tel');
+  var nome = el.getAttribute('data-nome');
+  sel(tel, nome);
 }
 
 async function carregarMsgs(tel) {
