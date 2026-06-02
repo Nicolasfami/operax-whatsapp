@@ -1,4 +1,4 @@
-// INDEX v48
+// INDEX v49
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require("@whiskeysockets/baileys")
 const { Boom } = require("@hapi/boom")
 const express = require("express")
@@ -269,7 +269,7 @@ body{font-family:'Inter',sans-serif;background:#dff0fb;height:100vh;display:flex
   </div>
 </div>
 <script>
-var SURL="${SUPABASE_URL}", SKEY="${SUPABASE_KEY}";
+var SURL="https://ynxpowhzhnwqazdxshch.supabase.co", SKEY="sb_publishable_aATPGJyG-Q8KuLLflByr8w_nrHxt0mt";
 var sb = supabase.createClient(SURL, SKEY);
 var socket = io();
 var telAtivo = null, todasConvs = [], vendaAtiva = null, editando = false;
